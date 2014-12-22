@@ -1,0 +1,10 @@
+What if someone breaks the symlink?
+
+Add /var/log/apptitute installed packets to versioner
+
+
+There is somethign odd when addind the WHOLE etc directory
+root@wkse15t1xams01:~/svn/versioner# ./versioner 
+2014-11-21 15:31:31,100, pid=1395, ./versioner:259, WARNING: 256 : svn: E145001: Commit failed (details follow):
+svn: E145001: Node '/root/svn/coral/wkse15t1xams01.wok1.egalacoral.com/etc/alternatives/aptitude' has unexpectedly changed kind
+root@wkse15t1xams01:~/svn/versioner# cd /root/svn/coral/wkse15t1xams01.wok1.egalacoral.com/etc/alternatives/

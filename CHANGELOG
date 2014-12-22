@@ -1,0 +1,21 @@
+CHANGELOG:
+
+  VERSION 1.1.1
+    - Fixed bug when choosing verbose mode
+    - Fixex that was not copying with the whole directory structure when in discovery mode
+    - Display the version number with --version
+    - Gracefully terminate when pressing CTRL+C
+    - Added maxdepth in the sample config file to prevent scanning ALL huge directories
+    - replaced diskutils.copy with rsync to make it faster and delete files too
+    - svn update itself
+    - updated deployment on-screen instructions
+
+  VERSION 1.1.0
+    - Change version to 1.1.0
+    - Included new group named "discovery" to copy the files from the find command
+    - Run the svn diff recusively (-r)
+    - Create changelog file
+    - Updated README with instructions how to get a summary of the changes
+  
+  VERSION 1.0.0
+    - File creation

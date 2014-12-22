@@ -1,0 +1,49 @@
+== Requirements ==
+Subversion
+rsync
+cp
+
+
+== INSTALL ==
+The steps to install this script are:
+
+As user ROOT do:
+
+1. Create a symlink to the version present in /home/amelco/<env>/sysadmin/versioner in /root/svn/versioner
+
+    mkdir /root/svn
+    svn checkout https://util-svn.amelco.co.uk/repos/infra-repo/ats/trunk/vanilla/sysadmin/versioner  /root/svn/versioner
+    
+    OR
+    ln -s /home/amelco/test1/sysadmin/versioner /root/svn/versioner
+   
+
+2. Copy the sample configuration file to the /etc/ directory
+   cp /root/svn/versioner/versioner.conf.sample /etc/versioner.conf
+
+
+3. Set the client name in the configuration file
+   nano /etc/versioner.conf
+
+
+4. Execute the versioner with the --config flag to the /etc dir
+   python /root/svn/versioner/versioner -c /etc/versioner.conf
+
+
+5. Execute the svn checkout that the application asks you too. When you press enter, all the files in config will be versioned
+
+
+6. Schedule it to run every so often. Example crontab
+00	07,16	*	*	*	/usr/bin/python /root/svn/versioner/versioner -c /etc/versioner.conf
+
+
+7. Execute this if you want the config file to be bi-directional, ie. make changes anywhere and the server pick it up
+rm -f /etc/versioner.conf
+ln -s /root/svn/<CLIENT>/<HOSTANAME>/etc/versioner.conf
+
+== GET DIFFERENCES ==
+The easiest way to see the differences, is to checkout the svn in a local directory.
+Get the current revison number
+Update the SVN
+Execute a svn diff -r $REVISON:HEAD
+

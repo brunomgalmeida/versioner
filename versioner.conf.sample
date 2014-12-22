@@ -1,0 +1,48 @@
+#Available svn users
+#
+#pokerstarssvn = rw
+#sportsbooksvn = rw
+#betclicsvn = rw
+#betfairsvn = rw
+#boylesvn = rw
+#cadizsvn = rw
+#coralsvn = rw
+#williamhillsvn = rw
+
+[repository]
+url                 = https://util-svn.amelco.co.uk/repos/infra-repo/server-config/
+checkout            = /root/svn/
+prefix              = 
+ 
+[files]
+#Copy each fo these files. If any does not exists throws an error
+versioner.conf      = /etc/versioner.conf
+hosts               = /etc/hosts
+fstab               = /etc/fstab
+ntp                 = /etc/ntp
+rclocal             = /etc/rc.local
+sysctl              = /etc/sysctl.conf
+sshs_config         = /etc/ssh/sshd_config
+ssh_config          = /etc/ssh/ssh_config
+apache.conf         = 
+
+
+[directories]
+#ALL Files and directories will be added recursively to the svn
+#etc                 = /etc
+
+[commands]
+#The output of this command is redirected to the file, and then put under version control
+#The following commands can take a long time if there are many users
+#all_authorized_keys = for f in `find /home /root -name authorized_keys`; do echo -e "#"$f"\n"; cat $f; done
+#all_pub_keys        = for f in `find /home /root -name id_rsa.pub`; do echo -e "#"$f"\n"; cat $f; done
+all_crons           = for user in `/bin/cat /etc/passwd | /bin/grep bash | /usr/bin/awk -F: {'print $1'}`; do /bin/echo -e '\n#crons for '$user ': '; /usr/bin/crontab -u $user -l; done
+
+[discovery]
+#Copies the files or directories returned by the find command, Directories HAVE NOT BEEN tested
+#    the suffix "-exec cp -r "{}" --parents $checkout/ \;" will be pragmatically added to the end of the command
+postgres.conf       = find /database/ -maxdepth 2 -type f -name 'postgresql.conf*'
+pg_hba.conf         = find /database/ -maxdepth 2 -type f -name 'pg_hba.conf*'
+sysinfo             = find /usr/local/bin/ -type f -name 'sysinfo'
+ats.properties      = find /home/amelco/ -maxdepth 3 -type f -name 'ats.properties'
+ats.env             = find /home/amelco/ -maxdepth 3 -type f -name 'ats.env'

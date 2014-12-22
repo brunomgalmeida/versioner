@@ -1,0 +1,44 @@
+HOW TO INSTALL
+
+1. Login as root to the box
+    ssh amelco@lnvm4
+    sudo su - 
+
+
+2. Change to user amelco and update the sysadmin directory
+    su - amelco
+    svn update /home/amelco/betclic1-bc/sysadmin
+    logout
+
+
+3. Back as user root copy the sample config to /etc/
+    cp /home/amelco/betclic1-bc/sysadmin/versioner/versioner.conf.sample /etc/versioner.conf
+
+
+4. Edit the file to include or exclude items from the application. Dont forget to update the prefix with the name of the corresponding client
+    vim /etc/versioner.conf
+
+    prefix=betclic
+
+
+5. Execute the versioner and follow the instructions.
+    python /home/amelco/betclic1-bc/sysadmin/versioner/versioner
+
+    1. Create a directory where to checkout the svn
+        mkdir -p "/root/svn//betclic/"
+    
+    2. Checkout the ROOT node of that directory only but empty. You might have to create it before if it returns an error
+        svn checkout --depth empty "https://util-svn.amelco.co.uk/repos/infra-repo/server-config/betclic" "/root/svn//betclic/"
+    
+    3. Use the correct svn user (see header of the versioner.conf)
+
+
+
+6. Execute the application again and now it should work and in the background create a svn copy of everything specified in the /vet/versioner.conf file. To see what is going on, execute it with --verbose
+    python /home/amelco/betclic1-bc/sysadmin/versioner/versioner --verbose    
+
+
+7. Create a cronjob to execute this command as often as you find necessary
+    crontab -e
+    00      */12        *       *       *   /usr/bin/python /home/amelco/betclic1-bc/sysadmin/versioner/versioner
+

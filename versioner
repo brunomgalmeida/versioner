@@ -1,0 +1,273 @@
+#!/usr/bin/python
+"""
+  2014-10-15 Bruno Almeida
+  
+    #https://muffinresearch.co.uk/svn-tip-get-list-of-files-changed-between-revisions/
+
+    HOW TO:
+        DEPLOY:
+            sudo su -
+            mkdir ~/svn
+            ln -s /home/amelco/test1/sysadmin/versioner/ ~/svn/versioner
+            cp ~/svn/versioner/versioner.conf /etc/versioner.conf
+            python ~/svn/versioner/versioner -c /etc/versioner.conf
+
+"""
+
+import shutil
+import distutils.core
+import ConfigParser
+import logging
+import os
+import sys
+import commands
+import socket
+import signal
+
+from datetime import datetime
+
+APPLICATION_VERSION = '1.1.1'
+
+
+def signal_handler(signal, frame):
+    #How to gracefully close the connections
+    sys.exit(1)
+
+#try:
+    #http://jtauber.com/python_subversion_binding/
+    #import svn.fs, svn.core, svn.repos
+    #assert (svn.core.SVN_VER_MAJOR, svn.core.SVN_VER_MINOR) >= (1, 3), "Subversion 1.3 or later required"
+    
+    #http://svn.apache.org/repos/asf/subversion/trunk/subversion/bindings/swig/python/tests/
+    #http://svn.apache.org/repos/asf/subversion/trunk/tools/examples/
+#    import svn.client
+#except:
+#    sys.stdout.write ("Please install python-subversion")
+#    exit(1)
+
+log = logging.getLogger()
+logging.basicConfig(format="%(asctime)s, pid=%(process)s, %(pathname)s:%(lineno)d, %(levelname)s: %(message)s",level=logging.WARN)
+app_path = os.path.realpath(__file__)
+app_path = app_path.split('/')[:-1]
+app_path = '/'.join(app_path) + '/'
+
+
+def parseArgs(args):
+    import argparse
+    args = args[1:] #remove the application name
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument ("--diff"       ,required=False, dest='diff'    ,help='Shows a list of available actions',action='store_true', default=False)
+    parser.add_argument ("--verbose"    ,required=False, dest='verbose' ,help='Increase verbosity level to DEBUG',action='store_true', default=False)
+    parser.add_argument ("--version"    ,required=False, dest='version' ,help='version',action='store_true', default=False)
+
+    parser.add_argument ("-c","--config",required=False,  dest='filename',help='Config filename', default="/etc/versioner.conf")
+    
+    found, not_found = parser.parse_known_args(args)
+
+    if found.verbose is True:
+        log.setLevel(logging.DEBUG)
+    
+    if found.version is True:
+        sys.stdout.write (APPLICATION_VERSION)
+        exit(1)
+
+    if len (not_found ) >0:
+        log.error ("Could not find what to do with these arguments: %s" %(not_found))
+        exit (1)
+
+    return found
+def getHostName():
+    #
+    return socket.gethostname()
+def dirExists(Dir):
+    #
+    return os.path.exists(Dir)
+def fileExists(Filename):
+    #
+    return os.path.isfile(Filename)
+def validateConfig():
+    #TODO: Check if the same 'KEY' is repeated
+    pass
+def now():
+    #Return the date in the format 2014-04-01 09:19:37.942353
+    return str(datetime.now())
+def execute (cmd):
+    #
+    return commands.getstatusoutput(cmd)
+
+
+if __name__ == '__main__':
+    #Gracefully stop when pressing CTRL+C
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    args = parseArgs(sys.argv)
+
+    #Check if the file config file exists
+    if not os.path.isfile(args.filename):
+        log.error ("Cannot find config file in %s" %args.filename)
+        exit (1)
+
+    #https://docs.python.org/2/library/configparser.html
+    Config = ConfigParser.ConfigParser()
+    Config.read (args.filename)
+
+    prefix = Config.get('repository','prefix')
+
+    if len (prefix) == 0:
+        log.error ("No prefix")
+        sys.stdout.write ("Please specify the prefix in the configuration file\n")
+        exit (2)
+
+    #
+    path = Config.get('repository','checkout') + '/' + prefix + '/'
+
+    #TODO: validate the config file and ensure there are no duplicate keys
+    validateConfig()
+
+    #If the directory for the repository does not exist, then we need to create it
+    if not os.path.exists(path):
+        #Give onscreen instructions on how to checkout the svn
+        url = Config.get('repository','url') + Config.get('repository','prefix')
+        sys.stdout.write ("Execute the following commands\n\n")
+        sys.stdout.write ('mkdir -p "%s"\n' %(path))
+        sys.stdout.write ('Create the directory "%s" in the subversion and commit it\n' %getHostName())
+        sys.stdout.write ('svn checkout --depth empty "%s" "%s"\n' %(url, path))
+        raw_input("\n\nPress Enter to continue...")
+
+    #Include the hostname in the path
+    path = Config.get('repository','checkout') + '/' + prefix + '/' + getHostName() + "/"
+
+    log.debug ("Updating svn")
+    err_code, output = execute('svn update %s' %path)
+    log.debug (output)
+    if err_code != 0:
+        log.error (output)
+        exit (1)
+
+    #Update itself
+    log.debug ("Updating itself svn")
+    err_code, output = execute('svn update %s' %app_path)
+    log.debug (output)
+    if err_code != 0:
+        log.error (output)
+        exit (1)
+    #TODO: See if I can find a way of doing all of this logic in a smarter way
+
+    #================================== FILES ==================================
+    for f in Config.items('files'):
+        try:
+            #=== Copy the file to the repository directory keeping the same location ===
+            src  = f[1]
+            dest = path + src
+
+            if len (f[1]) <=1:
+                log.warn ("Ignoring empty instruction: %s" %f[0])
+            else:
+                #check if the source if a file or directory
+                if os.path.isdir (src):
+                    log.error ('Directory declared instead of a file. %s' %f)
+
+                #Get the directory path without the filename
+                dest_dir = dest.rsplit('/',1)[0]
+
+                if not os.path.exists(dest_dir):
+                    log.debug ('Creating directory %s' %dest_dir)
+                    os.makedirs(dest_dir)
+
+                log.debug ('Copying %s to %s' %(src, dest))
+                try:
+                    shutil.copy2(src, dest)
+                except Exception, ex:
+                    log.warn (ex)
+
+        except Exception, ex:
+            log.error (ex)
+    
+    #=============================== DIRECTORIES ===============================
+    for d in Config.items('directories'):
+        try:
+            # === Copy the contents of the whole directory to here ===
+            src  = d[1]
+            dest = path + src
+            
+            if len (d[1]) <=1:
+                log.warn ("Ignoring empty instruction: %s" %d[0])
+            else:
+                log.debug ('Copying %s to %s' %(src, dest))
+
+                #try:
+                #    distutils.dir_util.copy_tree(src, dest)
+                #except Exception, ex:
+                #    log.warn (ex)
+                
+                #Replace the above command with an rsync. Should be faster and also deleted old files
+                err, out = execute ("rsync -a --delete-before %s/ %s/" %(src, dest))
+                if err !=0:
+                    log.info ("job %s return exit code '%s' : %s" %(c[0], err,out))
+                
+
+        except Exception, ex:
+            log.error (ex)
+
+    #================================= COMMANDS ================================
+    for c in Config.items('commands'):
+        try:
+            #=== Execute the following commands, and write it to the file in $svnrepo/$hostname/$cmd ===
+            src  = c[1]
+
+            if len(c[1]) <= 1:
+                log.warn ("Ignoring empty instruction: %s" %c[0])
+            else:
+                dest = path + c[0]
+                log.debug ('Piping output of command %s to %s' %(c[0], dest))
+                #http://www.xensoft.com/content/use-exec-direct-all-bash-script-output-file-syslog-or-other-command
+                err, out = execute ("exec 1> %s 2>&1; %s" %(dest, c[1]))
+                if err !=0:
+                    log.info ("job %s return exit code '%s' : %s" %(c[0], err,out))
+            
+        except Exception, ex:
+            log.error (ex)
+
+    #================================ DISCOVERY ================================
+    for c in Config.items('discovery'):
+        try:
+            #=== Execute the following commands, and write it to the file in $svnrepo/$hostname/$cmd ===
+            cmd  = c[1]
+
+            if len(c[1]) <= 1:
+                log.warn ("Ignoring empty instruction: %s" %c[0])
+            else:
+                dest = ' -exec cp -r "{}" --parents %s/ \;' %path
+                cmd  = cmd + dest
+
+                log.debug ('Executing command %s: "%s"' %(c[0], cmd))
+                err, out = execute (cmd)
+                if err !=0:
+                    log.error ("job %s return exit code '%s' : %s" %(c[0], err, out))
+            
+        except Exception, ex:
+            log.error (ex)
+
+    #Add everything to the SVN
+    log.debug ('Add to svn')
+    err, out = execute ('svn add %s --force' %(path))
+    
+    if err ==0:
+        log.debug (out)
+    else:
+        log.error ("%s : %s" %(err,out))
+        exit (1)
+    
+    #Show the diff if required
+    #if args.diff is True:
+    #    os.system('svn diff -r %s'  %(path))
+
+    #Commit all the changes to the SVN in one go
+    log.debug ('Commit to svn')
+    err, out = execute ('svn commit %s -m "%s"' %(path, "refresh at " + now()))
+    if err ==0:
+        log.debug (out)
+    else:
+        log.error ("%s : %s" %(err,out))
+        exit (1)
