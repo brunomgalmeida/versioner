@@ -1,16 +1,5 @@
-#Available svn users
-#
-#pokerstarssvn = rw
-#sportsbooksvn = rw
-#betclicsvn = rw
-#betfairsvn = rw
-#boylesvn = rw
-#cadizsvn = rw
-#coralsvn = rw
-#williamhillsvn = rw
-
 [repository]
-url                 = https://util-svn.amelco.co.uk/repos/infra-repo/server-config/
+url                 = https://util-svn.co.uk/repos/infra-repo/server-config/
 checkout            = /root/svn/
 prefix              = 
  
@@ -43,6 +32,3 @@ all_crons           = for user in `/bin/cat /etc/passwd | /bin/grep bash | /usr/
 #    the suffix "-exec cp -r "{}" --parents $checkout/ \;" will be pragmatically added to the end of the command
 postgres.conf       = find /database/ -maxdepth 2 -type f -name 'postgresql.conf*'
 pg_hba.conf         = find /database/ -maxdepth 2 -type f -name 'pg_hba.conf*'
-sysinfo             = find /usr/local/bin/ -type f -name 'sysinfo'
-ats.properties      = find /home/amelco/ -maxdepth 3 -type f -name 'ats.properties'
-ats.env             = find /home/amelco/ -maxdepth 3 -type f -name 'ats.env'
